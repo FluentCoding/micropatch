@@ -25,4 +25,24 @@ test("array inside object", () => {
 	);
 });
 
+test("deeply nested array", () => {
+	assert.equal(
+		patch(
+			{
+				test: true,
+				bananas: {
+					items: ["one", "two", "three"],
+				},
+			},
+			[{ path: ["bananas", "items", 1], type: "REMOVE" }]
+		),
+		{
+			test: true,
+			bananas: {
+				items: ["one", "three"],
+			},
+		}
+	);
+});
+
 test.run();

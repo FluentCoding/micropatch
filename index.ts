@@ -8,19 +8,23 @@ export default function patch(
 	obj: Record<string, any> | any[],
 	diffs: Difference[]
 ): Record<string, any> | any[] {
-	let arrayDelQueue = [];
 	const removeSymbol = Symbol("micropatch-delete");
 
 	for (const diff of diffs) {
-		if (!diff.path || diff.path.length === 0) continue;
+		if (!diff.path || !diff.path.length) continue;
 
-		let currObj = obj;
-		let diffPathLength = diff.path.length;
-		let lastPathElement = diff.path[diffPathLength - 1];
-		let secondLastPathElement = diff.path[diffPathLength - 2];
-		for (let i = 0; i < diffPathLength - 1; i++) {
-			currObj = currObj[diff.path[i]];
-		}
+		const lastPathElement = diff.path[diff.path.length - 1];
+		const secondLastPathElement = diff.path[diff.path.length - 2];
+
+		const parentObj = new Array(Math.max(diff.path.length - 2, 0))
+			.fill(null)
+			.reduce((pv, _, i) => pv[diff.path[i]], obj);
+		const currObj = secondLastPathElement
+			? parentObj[secondLastPathElement]
+			: obj;
+
+		if (currObj[lastPathElement] === undefined && diff.type != "CREATE")
+			throw new Error(`Path ${diff.path} doesn't exist`);
 
 		switch (diff.type) {
 			case "CREATE":
@@ -29,24 +33,20 @@ export default function patch(
 				break;
 			case "REMOVE":
 				if (Array.isArray(currObj)) {
-					(currObj as any)[lastPathElement] = removeSymbol;
-					arrayDelQueue.push(() => {
-						if (secondLastPathElement !== undefined) {
-							(currObj as any)[secondLastPathElement] = (currObj as any)[
-								secondLastPathElement
-							].filter((e: any) => e !== removeSymbol);
-						} else {
-							obj = obj.filter((e: any) => e !== removeSymbol);
-						}
-					});
+					currObj[lastPathElement] = removeSymbol;
+					if (secondLastPathElement !== undefined) {
+						parentObj[secondLastPathElement] = currObj.filter(
+							(e: any) => e !== removeSymbol
+						);
+					} else {
+						obj = obj.filter((e: any) => e !== removeSymbol);
+					}
 				} else {
 					delete currObj[lastPathElement];
 				}
 				break;
 		}
 	}
-
-	arrayDelQueue.forEach((arrayDeletion) => arrayDeletion());
 
 	return obj;
 }
