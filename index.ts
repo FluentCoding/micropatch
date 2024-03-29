@@ -1,9 +1,24 @@
-interface Difference {
-	type: "CREATE" | "REMOVE" | "CHANGE";
-	path: (string | number)[];
-	value?: any;
-	oldValue?: any;
+interface DifferenceCreate {
+	type: "CREATE";
+	path: Path;
+	value: any;
 }
+
+interface DifferenceRemove {
+	type: "REMOVE";
+	path: Path;
+	oldValue: any;
+}
+
+interface DifferenceChange {
+	type: "CHANGE";
+	path: Path;
+	value: any;
+	oldValue: any;
+}
+
+type Path = (string | number)[];
+type Difference = DifferenceCreate | DifferenceRemove | DifferenceChange;
 export default function patch(
 	obj: Record<string, any> | any[],
 	diffs: Difference[]
